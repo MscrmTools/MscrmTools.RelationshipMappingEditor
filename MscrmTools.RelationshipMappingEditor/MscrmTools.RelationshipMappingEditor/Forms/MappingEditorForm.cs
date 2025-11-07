@@ -81,7 +81,7 @@ namespace MscrmTools.RelationshipMappingEditor.Forms
                             new ListViewItem.ListViewSubItem{Text = TargetTable.Attributes.FirstOrDefault(a => a.LogicalName == m.GetAttributeValue<string>("targetattributename"))?.DisplayName?.UserLocalizedLabel?.Label ?? "N/A" },
                             new ListViewItem.ListViewSubItem{Text = TargetTable.Attributes.FirstOrDefault(a => a.LogicalName == m.GetAttributeValue<string>("targetattributename"))?.SchemaName },
                             new ListViewItem.ListViewSubItem{Text = TargetTable.Attributes.FirstOrDefault(a => a.LogicalName == m.GetAttributeValue<string>("targetattributename"))?.AttributeType.Value.ToString() },
-                             new ListViewItem.ListViewSubItem{Text = m.GetAttributeValue<bool>("issystem").ToString() },
+                            new ListViewItem.ListViewSubItem{Text = m.GetAttributeValue<bool>("issystem").ToString() },
                             new ListViewItem.ListViewSubItem{Text = m.GetAttributeValue<bool>("ismanaged").ToString() }
                         },
                         Tag = m
@@ -146,6 +146,7 @@ namespace MscrmTools.RelationshipMappingEditor.Forms
                     am["entitymapid"] = currentEntityMap.ToEntityReference();
                     am["sourceattributename"] = sourceAttr;
                     am["targetattributename"] = targetAttr;
+                    am["ismanaged"] = false;
 
                     am.Id = Service.Create(am);
                     Mappings.Add(am);
@@ -168,7 +169,7 @@ namespace MscrmTools.RelationshipMappingEditor.Forms
                         {
                             new ListViewItem.ListViewSubItem{Text = SourceTable.Attributes.FirstOrDefault(a => a.LogicalName == am.GetAttributeValue<string>("sourceattributename"))?.SchemaName },
                             new ListViewItem.ListViewSubItem{Text = TargetTable.Attributes.FirstOrDefault(a => a.LogicalName == am.GetAttributeValue<string>("targetattributename"))?.DisplayName?.UserLocalizedLabel?.Label ?? "N/A" },
-                            new ListViewItem.ListViewSubItem{Text = SourceTable.Attributes.FirstOrDefault(a => a.LogicalName == am.GetAttributeValue<string>("targetattributename"))?.SchemaName },
+                            new ListViewItem.ListViewSubItem{Text = TargetTable.Attributes.FirstOrDefault(a => a.LogicalName == am.GetAttributeValue<string>("targetattributename"))?.SchemaName },
                             new ListViewItem.ListViewSubItem{Text = am.GetAttributeValue<bool>("issystem").ToString() },
                             new ListViewItem.ListViewSubItem{Text = am.GetAttributeValue<bool>("ismanaged").ToString() }
                         },
@@ -363,8 +364,11 @@ namespace MscrmTools.RelationshipMappingEditor.Forms
 
             lvTargetColumns.Items.AddRange(targetItems
                        .Where(i => Mappings.All(m => m.GetAttributeValue<string>("targetattributename") != ((AttributeMetadata)i.Tag).LogicalName))
-                       .Where(i => ((AttributeMetadata)i.Tag).AttributeType.Value == sourceMetadata.AttributeType.Value)
-                       .Where(i => !(i.Tag is LookupAttributeMetadata) || i.Tag is LookupAttributeMetadata amd && amd.Targets.Contains((sourceMetadata as LookupAttributeMetadata)?.Targets[0] ?? ""))
+                       .Where(i => ((AttributeMetadata)i.Tag).AttributeType.Value == sourceMetadata.AttributeType.Value
+                        || (i.Tag is LookupAttributeMetadata targetLamd  && sourceMetadata is LookupAttributeMetadata sourceLlamd && sourceLlamd.AttributeType == AttributeTypeCode.Customer 
+                        && (targetLamd.Targets.Contains("contact") || targetLamd.Targets.Contains("account")))
+                       )
+                       .Where(i => !(i.Tag is LookupAttributeMetadata) || i.Tag is LookupAttributeMetadata amd && amd.Targets.Any(t => (sourceMetadata as LookupAttributeMetadata)?.Targets.Contains(t) ?? false))
                        .Where(i => !(i.Tag is PicklistAttributeMetadata) || i.Tag is PicklistAttributeMetadata omd && omd.OptionSet.Name == ((sourceMetadata as PicklistAttributeMetadata)?.OptionSet.Name ?? ""))
                        .Where(i => !(i.Tag is StringAttributeMetadata) || i.Tag is StringAttributeMetadata smd && smd.MaxLength >= ((sourceMetadata as StringAttributeMetadata)?.MaxLength ?? 0) && smd.Format == ((sourceMetadata as StringAttributeMetadata)?.Format))
                        .Where(i => !(i.Tag is IntegerAttributeMetadata) || i.Tag is IntegerAttributeMetadata smd && smd.Format == ((sourceMetadata as IntegerAttributeMetadata)?.Format))
